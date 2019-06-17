@@ -1,0 +1,6 @@
+{
+    "python.pythonPath": "/Users/adhamelarabawy/venv/bin/python",
+    "python.linting.mypyEnabled": false,
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true
+}
