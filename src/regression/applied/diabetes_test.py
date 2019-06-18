@@ -24,7 +24,7 @@ diabetes['ROI'] = diabetes_dataset.target
 # check to see if there are any null values in the dataset
 # print(diabetes.isnull().sum())
 
-# EXPLORATORY DATA ANALYSIS(visualizations to understand the relationship of the target var with other feeatures):
+# EXPLORATORY DATA ANALYSIS(visualizations to understand the relationship of the target var with other features):
 
 # ---plot distribution of target variable
 sns.set(rc={'figure.figsize': (11.7, 8.27)})
