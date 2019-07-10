@@ -14,6 +14,10 @@ import shutil
 import os
 
 #--CONFIG--#
+VERSION_NUMBER = 2
+dataServerLocation = "/mnt/nas01/workspace_share/cnn/yolo/darknet/data/t" + \
+    str(VERSION_NUMBER)  # + "/test/"
+defaultMarkTrainPath = "x64/Release/data/img/"
 # in yolo_mark, this is your data/img:
 imageDir = "/Users/adhamelarabawy/Documents/GitHub/Yolo_mark/x64/Release/data/t2/img"
 trainDir = "/Users/adhamelarabawy/Documents/GitHub/Yolo_mark/x64/Release/data/t2/train"
@@ -42,11 +46,15 @@ print("# of images in test:", testNumOfImages)
 shuffledFiles = random.sample(files, len(files))
 testList = []
 tempIndex = 0
+
+testFile = open(testDir+"."+textType, "w")
 for file in shuffledFiles:
     if file[-len(imgType):] == imgType:
         testList.append(file)
+        testFile.write(dataServerLocation + "/test/" + file + "\n")
         tempIndex += 1
     if(tempIndex == testNumOfImages):
+        testFile.close()
         break
 
 
@@ -66,3 +74,26 @@ for file in testList:
         print("Found File: ", foundFile)
         print("Remaining File: ", remainingFile)
         break
+
+# remove images in test dataset from train text file
+for file in testList:
+    strippedFile = file[:-len(imgType)]
+    print(strippedFile)
+    fn = trainDir+"."+textType
+    output = open(fn).readlines()
+    t = open(fn, 'w')
+    t.writelines([item for item in output if str(strippedFile) not in item])
+    t.close()
+
+# fix the train text file paths:
+# Read in the file
+with open(fn, 'r') as file:
+    filedata = file.read()
+
+# Replace the target string
+filedata = filedata.replace(
+    defaultMarkTrainPath, dataServerLocation + "/train/")
+
+# Write the file out again
+with open(fn, 'w') as file:
+    file.write(filedata)
