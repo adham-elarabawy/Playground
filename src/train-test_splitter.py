@@ -14,8 +14,8 @@ import shutil
 import os
 
 #--CONFIG--#
-VERSION_NUMBER = 2
-IS_USING_ALEXEY = False
+VERSION_NUMBER = 3
+IS_USING_ALEXEY = True
 
 dataServerLocation = "/mnt/nas01/workspace_share/cnn/yolo/darknet/data/t" + \
     str(VERSION_NUMBER)
@@ -25,11 +25,11 @@ if(IS_USING_ALEXEY):
 defaultMarkTrainPath = "x64/Release/data/img/"
 # in yolo_mark, this is your data/img:
 imageDir = "/Users/adhamelarabawy/Documents/GitHub/Yolo_mark/x64/Release/data/t" + \
-    VERSION_NUMBER + "/img"
+    str(VERSION_NUMBER) + "/img"
 trainDir = "/Users/adhamelarabawy/Documents/GitHub/Yolo_mark/x64/Release/data/t" + \
-    VERSION_NUMBER + "/train"
+    str(VERSION_NUMBER) + "/train"
 testDir = "/Users/adhamelarabawy/Documents/GitHub/Yolo_mark/x64/Release/data/t" + \
-    VERSION_NUMBER + "/test"
+    str(VERSION_NUMBER) + "/test"
 # this means that the test dataset(testDir) will be 20% the original size of the original dataset(imageDir)
 testPercent = 0.2
 imgType = "jpg"
