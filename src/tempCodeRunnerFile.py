@@ -1,1 +1,1 @@
-files = os.listdir(imageDir)
+plt.show()

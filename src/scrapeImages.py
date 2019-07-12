@@ -1,63 +1,65 @@
-from bs4 import BeautifulSoup
-import requests
-import re
-import urllib2
-import os
-import argparse
-import sys
-import json
-import random
+# importing google_images_download module
+from google_images_download import google_images_download
+
+# creating object
+response = google_images_download.googleimagesdownload()
+
+search_queries = [
+    'yosemite',
+    'india traffic',
+    'cereal brand logo'
+]
 
 
-def get_soup(url, header):
-    return BeautifulSoup(urllib2.urlopen(urllib2.Request(url, headers=header)), 'html.parser')
-
-
-def main(args):
-    parser = argparse.ArgumentParser(description='Scrape Google images')
-    parser.add_argument('-s', '--search', default='bananas',
-                        type=str, help='search term')
-    parser.add_argument('-n', '--num_images', default=10,
-                        type=int, help='num images to save')
-    parser.add_argument(
-        '-d', '--directory', default='/Users/gene/Downloads/', type=str, help='save directory')
-    args = parser.parse_args()
-    query = args.search  # raw_input(args.search)
-    seed = str(args.search).replace(" ", "")
-    max_images = args.num_images
-    save_directory = args.directory
-    image_type = "Action"
-    query = query.split()
-    query = '+'.join(query)
-    url = "https://www.google.co.in/search?q="+query+"&source=lnms&tbm=isch"
-    header = {
-        'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
-    soup = get_soup(url, header)
-    ActualImages = []  # contains the link for Large original images, type of  image
-    for a in soup.find_all("div", {"class": "rg_meta"}):
-        link, Type = json.loads(a.text)["ou"], json.loads(a.text)["ity"]
-        ActualImages.append((link, Type))
-    for i, (img, Type) in enumerate(ActualImages[0:max_images]):
-        try:
-            req = urllib2.Request(img, headers={'User-Agent': header})
-            raw_img = urllib2.urlopen(req).read()
-            if len(Type) == 0:
-                f = open(os.path.join(save_directory,
-                                      "img" + seed + "_" + str(i)+".jpg"), 'wb')
-            else:
-                f = open(os.path.join(save_directory,
-                                      "img" + seed + "_" + str(i)+"."+Type), 'wb')
-            f.write(raw_img)
-            f.close()
-        except Exception as e:
-            print "could not load : "+img
-            print e
-
-
-if __name__ == '__main__':
-    from sys import argv
+def downloadimages(query):
+    # keywords is the search query
+    # format is the image file format
+    # limit is the number of images to be downloaded
+    # print urs is to print the image file url
+    # size is the image size which can
+    # be specified manually ("large, medium, icon")
+    # aspect ratio denotes the height width ratio
+    # of images to download. ("tall, square, wide, panoramic")
+    arguments = {
+        "keywords": query,
+        "format": "jpg",
+        "limit": 200,
+        "print_urls": True,
+        "size": "large",
+        "aspect_ratio": "wide",
+        "chromedriver": "/usr/local/bin/chromedriver",
+        "output_directory": "/Users/adhamelarabawy/Documents/GitHub/Yolo_mark/x64/Release/data/scraped/",
+        # "no_directory": True,
+        "no_numbering": True
+    }
     try:
-        main(argv)
-    except KeyboardInterrupt:
-        pass
-    sys.exit()
+        response.download(arguments)
+
+    # Handling File NotFound Error
+    except FileNotFoundError:
+        print("FILE NOT FOUND ERROR")
+        arguments = {
+            "keywords": query,
+            "format": "jpg",
+            "limit": 200,
+            "print_urls": True,
+            "size": "large",
+            "chromedriver": "/usr/local/bin/chromedriver",
+            "output_directory": "/Users/adhamelarabawy/Documents/GitHub/Yolo_mark/x64/Release/data/scraped/",
+            # "no_directory": True,
+            "no_numbering": True
+        }
+
+        # Providing arguments for the searched query
+        try:
+            # Downloading the photos based
+            # on the given arguments
+            response.download(arguments)
+        except:
+            pass
+
+
+# Driver Code
+for query in search_queries:
+    downloadimages(query)
+    print()
