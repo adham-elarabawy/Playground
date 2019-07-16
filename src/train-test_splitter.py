@@ -67,7 +67,7 @@ for file in shuffledFiles:
 
 
 for file in testList:
-    # file at current index is always a string in this loop
+    # file at current index is always an image in this loop
     foundFile = str(file)
     remainingFile = str(
         file[:-len(imgType)] + textType)

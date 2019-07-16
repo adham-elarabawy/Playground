@@ -1,3 +1,7 @@
+# author: Adham Elarabawy
+# date: 7/9/2019
+# use-case:
+
 import sys
 import matplotlib.pyplot as plt
 
