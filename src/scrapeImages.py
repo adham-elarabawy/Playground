@@ -5,9 +5,9 @@ from google_images_download import google_images_download
 response = google_images_download.googleimagesdownload()
 
 search_queries = [
-    'yosemite',
-    'india traffic',
-    'cereal brand logo'
+    'mobile phone',
+    'babies',
+    'wallet'
 ]
 
 
@@ -27,8 +27,8 @@ def downloadimages(query):
         "print_urls": True,
         "size": "large",
         "aspect_ratio": "wide",
-        "chromedriver": "/usr/local/bin/chromedriver",
-        "output_directory": "/Users/adhamelarabawy/Documents/GitHub/Yolo_mark/x64/Release/data/scraped/",
+        "chromedriver": "C:\\tools\\chromedriver.exe",
+        "output_directory": "C:\\Users\\googo\\Pictures\\Camera Roll\\Kelzal\\Object Recognition Negatives",
         # "no_directory": True,
         "no_numbering": True
     }
@@ -44,8 +44,8 @@ def downloadimages(query):
             "limit": 200,
             "print_urls": True,
             "size": "large",
-            "chromedriver": "/usr/local/bin/chromedriver",
-            "output_directory": "/Users/adhamelarabawy/Documents/GitHub/Yolo_mark/x64/Release/data/scraped/",
+            "chromedriver": "C:\\tools\\chromedriver.exe",
+        	"output_directory": "C:\\Users\\googo\\Pictures\\Camera Roll\\Kelzal\\Object Recognition Negatives",
             # "no_directory": True,
             "no_numbering": True
         }
