@@ -2,7 +2,8 @@ import numpy as np
 import cv2
 
 # --CONFIG--
-VERSION_NUMBER = 2
+DEBUG = False
+VERSION_NUMBER = 4
 video_name = 'nutri_bar.mkv'
 video_path = '/Users/adhamelarabawy/Documents/Kelzal/test_videos/' + video_name
 
@@ -15,8 +16,8 @@ writer = cv2.VideoWriter(fileName, cv2.VideoWriter_fourcc(
 
 # start video capture
 cap = cv2.VideoCapture(video_path)
+clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 i = 0
-clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(20, 20))
 while(cap.isOpened()):
     ret, frame = cap.read()
     if ret == True:
@@ -24,8 +25,11 @@ while(cap.isOpened()):
         i += 1
         grayed = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         heq_frame = clahe.apply(grayed)
-        cv2.imshow('cvwin', heq_frame)
-        final = cv2.cvtColor(heq_frame, cv2.COLOR_GRAY2RGB)
+        #final = cv2.cvtColor(heq_frame, cv2.COLOR_GRAY2RGB)
+        (thresh, im_bw) = cv2.threshold(heq_frame, 0,
+                                        255, cv2.THRESH_OTSU)
+        final = cv2.cvtColor(im_bw, cv2.COLOR_GRAY2BGR)
+        cv2.imshow('cvwin', final)
         writer.write(final)
         if cv2.waitKey(1) & 0xFF == ord('q'):  # press q to quit
             print("quit succcessfully")
