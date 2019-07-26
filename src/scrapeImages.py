@@ -5,9 +5,13 @@ from google_images_download import google_images_download
 response = google_images_download.googleimagesdownload()
 
 search_queries = [
+<<<<<<< Updated upstream
     'yosemite',
     'india traffic',
     'cereal brand logo'
+=======
+    'car keys'
+>>>>>>> Stashed changes
 ]
 
 
