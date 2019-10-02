@@ -15,8 +15,8 @@ sc = ax.scatter(x, y)
 plt.xlim(0, 80)
 plt.ylim(0, 80)
 plt.title("Nonlinear Pose Estimation")
-plt.xlabel("X (inches)")
-plt.ylabel("Y (inches)")
+plt.xlabel("x (inches)")
+plt.ylabel("y (inches)")
 plt.draw()
 
 
