@@ -4,7 +4,7 @@ from datetime import datetime
 import math
 format = '%H:%M:%S'
 
-with open('/Volumes/ROBOTICS/newscans.csv') as csvfile:
+with open('newscans.csv') as csvfile:
     readCSV = csv.reader(csvfile, delimiter=',')
     ids = []
     inHour = []
