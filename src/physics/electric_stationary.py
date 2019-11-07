@@ -9,7 +9,8 @@ q1 = 1.6 * 1/(10 ^ 19)  # pos
 q2 = -q1  # neg
 posColor = '#1f77b4'
 negColor = '#d62728'
-mass = 1  # some negligible mass. Can change if needed.
+# some negligible mass. Can change if needed. Affects calculated acceleration.
+mass = 1
 arrowAmp = 0.5  # changes force scaling factor for the vectors (purely visual)
 granularity = 0.01  # increase to have smoother animation. more computation though
 
@@ -25,9 +26,9 @@ q2_vel = 0
 plt.ion()
 fig, ax = plt.subplots()
 x, y = [[q1_pos, q2_pos], [0, 0]]
-a1 = ax.arrow(q1_pos, 0, 1, 0, head_width=0.01,
+a1 = ax.arrow(q1_pos, 0, 0, 0, head_width=0.01,
               head_length=0.05, fc=posColor, ec=posColor)
-a2 = ax.arrow(q2_pos, 0, -1, 0, head_width=0.01,
+a2 = ax.arrow(q2_pos, 0, 0, 0, head_width=0.01,
               head_length=0.05, fc=negColor, ec=negColor)
 sc = ax.scatter(x, y, c="black")
 plt.xlim(0, 2)
