@@ -1,3 +1,4 @@
+# author: Adham Elarabawy
 import matplotlib.pyplot as plt
 import time
 import datetime as dt
@@ -10,8 +11,7 @@ posColor = '#1f77b4'
 negColor = '#d62728'
 mass = 1  # some negligible mass. Can change if needed.
 arrowAmp = 0.5  # changes force scaling factor for the vectors (purely visual)
-# keep at 1 for realtime (valid simulation), decrease to "speed up" // KEEP ABOVE 0.1
-timestep = 0.01
+granularity = 0.01  # increase to have smoother animation. more computation though
 
 
 # init variables
@@ -46,30 +46,30 @@ while not collided:
     acceleration = force / mass
     if((q1 > 0) == (q2 > 0)):  # both charges are the same sign
         if(q1_pos < q2_pos):  # if q1 is to the left of q2
-            q1_vel -= acceleration * timestep
+            q1_vel -= acceleration * granularity
             q1_pos += q1_vel
 
-            q2_vel += acceleration * timestep
-            q2_pos += q2_vel * timestep
+            q2_vel += acceleration * granularity
+            q2_pos += q2_vel * granularity
         else:  # if q2 is to the left of q1
-            q2_vel -= acceleration * timestep
-            q2_pos += q2_vel * timestep
+            q2_vel -= acceleration * granularity
+            q2_pos += q2_vel * granularity
 
-            q1_vel += acceleration * timestep
-            q1_pos += q1_vel * timestep
+            q1_vel += acceleration * granularity
+            q1_pos += q1_vel * granularity
     else:  # both charges are different signs
         if(q1_pos < q2_pos):  # if q1 is to the left of q2
-            q1_vel += acceleration * timestep
-            q1_pos += q1_vel * timestep
+            q1_vel += acceleration * granularity
+            q1_pos += q1_vel * granularity
 
-            q2_vel -= acceleration * timestep
-            q2_pos += q2_vel * timestep
+            q2_vel -= acceleration * granularity
+            q2_pos += q2_vel * granularity
         else:  # if q2 is to the left of q1
-            q2_vel += acceleration * timestep
-            q2_pos += q2_vel * timestep
+            q2_vel += acceleration * granularity
+            q2_pos += q2_vel * granularity
 
-            q1_vel -= acceleration * timestep
-            q1_pos += q1_vel * timestep
+            q1_vel -= acceleration * granularity
+            q1_pos += q1_vel * granularity
 
     print('q1_pos: [' + str(q1_pos) + '], q2_pos: [' + str(q2_pos) + '], force: [' +
           str(force) + '], distance: [' + str(q2_pos - q1_pos) + ']', end='\r')
@@ -84,6 +84,6 @@ while not collided:
     a2 = ax.arrow(q2_pos, 0, -force*arrowAmp, 0, head_width=0.03,
                   head_length=0.05, fc=negColor, ec=negColor)
     sc = plt.scatter(x, y, color='black')
-    if(timestep > time_elapsed):
-        plt.pause(timestep - time_elapsed)
+    if(granularity > time_elapsed):
+        plt.pause(granularity - time_elapsed)
     fig.canvas.draw_idle()
