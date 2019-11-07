@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 import time
 import datetime as dt
+import argparse
 
 # constants
 k = 9 * 10 ^ 9
@@ -16,10 +17,10 @@ granularity = 0.01  # increase to have smoother animation. more computation thou
 
 
 # init variables
-q1_pos = 0.25
-q2_pos = 1
+q1_pos = 0.5
+q2_pos = 1.5
 
-q1_vel = 0
+q1_vel = 0.5
 q2_vel = 0
 
 left_bound_screen = 0
