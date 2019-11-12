@@ -5,7 +5,7 @@ import datetime as dt
 import argparse
 
 # constants
-history = True
+history = False
 k = 9 * 10 ^ 9
 q1 = 1.6 * 1/(10 ^ 19)  # pos
 q2 = q1  # neg
@@ -18,13 +18,13 @@ granularity = 0.01  # increase to have smoother animation. more computation thou
 
 
 # init variables
-q1_pos = 0.5
-q2_pos = 1.5
+q1_pos = 0.75
+q2_pos = 1.25
 
 m1 = 9.11 * 1/(10 ^ 31)  # mass of positron
-m2 = 5 * 9.11 * 1/(10 ^ 31)  # mass of electron
+m2 = 9.11 * 1/(10 ^ 31)  # mass of electron
 
-q1_vel = 0.5
+q1_vel = 0
 q2_vel = 0
 
 left_bound_screen = 0
@@ -52,9 +52,11 @@ plt.draw()
 
 q1_accel = 1
 q2_accel = 1
-
+i = 0
 collided = False
 while not collided:
+    i = i + 1
+    plt.savefig('output/frame' + str(i) + '.png')
     if(q1_pos > q2_pos) or (((q1_pos < left_bound_screen) or (q1 > right_bound_screen)) and ((q2_pos > right_bound_screen) or (q2_pos < left_bound_screen))):
         print('simulation terminated: end condition reached')
         collided = True
@@ -130,3 +132,5 @@ while not collided:
     else:
         print('granularity too fine for computational resources (loop is running slower than the indicated granularity~timestep). \nIf you would like a more accurate simulation, increase granularity at the cost of animation smoothness.')
     fig.canvas.draw_idle()
+
+plt.savefig('output/test.png')
