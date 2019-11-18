@@ -1,8 +1,4 @@
 
-1aheq_nutri_bar.avi
-src/1aheq_nutri_bar.avi
-src/2aheq_nutri_bar.avi
-src/aheq_nutri_bar.avi
-src/heq_nutri_bar.avi
-src/3aheq_nutri_bar.avi
-src/4aheq_nutri_bar.avi
+src/kelzal/input/*
+src/robotics/input/*
+src/physics/output/*

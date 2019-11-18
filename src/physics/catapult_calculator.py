@@ -2,7 +2,7 @@ import argparse
 
 #--CONFIG--#
 low_shift = 10
-high_shift = 70
+high_shift = 76
 
 cutoff_thresh = 280
 
