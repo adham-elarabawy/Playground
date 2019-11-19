@@ -6,26 +6,26 @@ import random
 # -- CONFIG -- #
 increment = 0.025
 DESCEND = False
-kP = 0.05
+kP = 0.1
 dt = 0.1
-cutoff = 0.001
-sacling_factor = 1/7
-upper_x = 30  # purely visual, doesn't affect algorithm
+cutoff = 0.0002
+scaling_factor = 1/3
+upper_x = 5  # purely visual, doesn't affect algorithm
 lower_x = -upper_x
 upper_y = 30
 lower_y = -upper_y
-starting_point = 0.5  # keep within upper and lower bounds
+starting_point = 0.3  # keep within upper and lower bounds
 
 x, y = symbols('x y')
 
 # -- TEMP -- #
-coeff_1 = random.randint(5, 15)
-coeff_2 = random.randint(1, 5)
-exp_1 = random.randint(-6, 6)
-exp_2 = random.randint(-2, 7)
+coeff_1 = 5  # random.randint(5, 15)
+coeff_2 = 1  # random.randint(1, 5)
+exp_1 = 3  # random.randint(-6, 6)
+exp_2 = 8  # random.randint(-2, 7)
 
-expr = coeff_1*((sacling_factor * x)**exp_1) - \
-    coeff_2*((sacling_factor * x)**exp_2)
+expr = coeff_1*((scaling_factor * x)**exp_1) - \
+    coeff_2*((scaling_factor * x)**exp_2)
 expr_deriv = expr.diff(x)
 
 print(f'Descending? {DESCEND}\nEquation: {expr}\nDerivative: {expr_deriv}')
@@ -59,30 +59,29 @@ history = []
 while not FINISHED:
     curr_y = expr.subs(x, curr_x)
     dy = expr_deriv.subs(x, curr_x)
-    print(
-        f'(x,y): ({round(curr_x, 4)},{round(curr_y, 4)})   dy: {round(dy, 4)}', end='\r')
     scp.remove()
     scp = ax.scatter(curr_x, curr_y, color='#9467bd')
     fig.canvas.draw_idle()
     history.append(curr_x)
 
+    increment = dy * kP
     if not DESCEND:
-        dy *= -1
+        increment *= -1
     if dy > 0:
         curr_x -= increment
     if dy < 0:
         curr_x += increment
 
-    if (len(history) > 1 and curr_x == history[-2]):
-        increment = increment/2
-        if increment <= cutoff:
-            FINISHED = True
-            print(
-                f'\nExited Gracefully. Converged on: ({curr_x},{curr_y}) as the relative extrema')
+    print(
+        f'(x,y): ({round(curr_x, 4)},{round(curr_y, 4)})   dy: {round(dy, 4)}   increment: {increment}', end='\r')
+    if abs(increment) <= cutoff:
+        FINISHED = True
+        print(
+            f'\nExited gracefully. Converged on: ({curr_x},{curr_y}) as the relative extrema')
     if dy == 0:
         FINISHED = True
         print(
-            f'\nExited Gracefully. Converged on: ({curr_x},{curr_y}) as the relative extrema')
+            f'\nExited on perfect minima. Converged on: ({curr_x},{curr_y}) as the relative extrema')
     if curr_x > upper_x or curr_x < lower_x or curr_y > upper_y or curr_y < lower_y:
         FINISHED = True
         print('\nFell out of bounds.')
