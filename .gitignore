@@ -2,3 +2,4 @@
 src/kelzal/input/*
 src/robotics/input/*
 src/physics/output/*
+src/test.py

@@ -9,14 +9,23 @@ DESCEND = False
 kP = 0.05
 dt = 0.1
 cutoff = 0.001
-upper_x = 4  # purely visual, doesn't affect algorithm
+sacling_factor = 1/7
+upper_x = 30  # purely visual, doesn't affect algorithm
 lower_x = -upper_x
-upper_y = 10
+upper_y = 30
 lower_y = -upper_y
-starting_point = random.uniform(-2, 2)  # keep within upper and lower bounds
+starting_point = 0.5  # keep within upper and lower bounds
 
 x, y = symbols('x y')
-expr = 5*(x**3) - (x**7)
+
+# -- TEMP -- #
+coeff_1 = random.randint(5, 15)
+coeff_2 = random.randint(1, 5)
+exp_1 = random.randint(-6, 6)
+exp_2 = random.randint(-2, 7)
+
+expr = coeff_1*((sacling_factor * x)**exp_1) - \
+    coeff_2*((sacling_factor * x)**exp_2)
 expr_deriv = expr.diff(x)
 
 print(f'Descending? {DESCEND}\nEquation: {expr}\nDerivative: {expr_deriv}')
@@ -68,6 +77,13 @@ while not FINISHED:
         increment = increment/2
         if increment <= cutoff:
             FINISHED = True
-    if dy == 0 or curr_x > upper_x or curr_x < lower_x or curr_y > upper_y or curr_y < lower_y:
+            print(
+                f'\nExited Gracefully. Converged on: ({curr_x},{curr_y}) as the relative extrema')
+    if dy == 0:
         FINISHED = True
+        print(
+            f'\nExited Gracefully. Converged on: ({curr_x},{curr_y}) as the relative extrema')
+    if curr_x > upper_x or curr_x < lower_x or curr_y > upper_y or curr_y < lower_y:
+        FINISHED = True
+        print('\nFell out of bounds.')
     plt.pause(dt)
