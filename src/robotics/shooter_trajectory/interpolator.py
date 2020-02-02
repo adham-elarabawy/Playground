@@ -71,3 +71,15 @@ print(text)
 outFile = open(outFName, "w+")
 outFile.write(text)
 outFile.close()
+
+with open("mList.csv", "w+") as outFile:
+	for i in range(len(mList)):
+		if i != 0:
+			outFile.write(",")
+		outFile.write(str(mList[i]))
+
+with open("bList.csv", "w+") as outFile:
+    for i in range(len(bList)):
+        if i != 0:
+            outFile.write(",")
+        outFile.write(str(bList[i]))
