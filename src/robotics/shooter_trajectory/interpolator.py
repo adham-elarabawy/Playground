@@ -1,5 +1,6 @@
 import sys
 import re
+import numpy as np
 
 outFName = sys.argv[3]
 
@@ -72,14 +73,19 @@ outFile = open(outFName, "w+")
 outFile.write(text)
 outFile.close()
 
-with open("mList.csv", "w+") as outFile:
+with open("pw_lin_interp_mList.csv", "w+") as outFile:
 	for i in range(len(mList)):
 		if i != 0:
 			outFile.write(",")
 		outFile.write(str(mList[i]))
 
-with open("bList.csv", "w+") as outFile:
+with open("pw_lin_interp_bList.csv", "w+") as outFile:
     for i in range(len(bList)):
         if i != 0:
             outFile.write(",")
         outFile.write(str(bList[i]))
+
+lin = np.polyfit(xMap, yMap, 1)
+
+np.polyfit(xMap, yMap, 2, full=False)
+
