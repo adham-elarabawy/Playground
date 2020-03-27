@@ -19,10 +19,10 @@ starting_point = 0.3  # keep within upper and lower bounds
 x, y = symbols('x y')
 
 # -- TEMP -- #
-coeff_1 = 5  # random.randint(5, 15)
-coeff_2 = 1  # random.randint(1, 5)
-exp_1 = 3  # random.randint(-6, 6)
-exp_2 = 8  # random.randint(-2, 7)
+coeff_1 = 5 # random.randint(5, 15)
+coeff_2 = 1 # random.randint(1, 5)
+exp_1 = 3 # random.randint(-6, 6)
+exp_2 = 8 # random.randint(-2, 7)
 
 expr = coeff_1*((scaling_factor * x)**exp_1) - \
     coeff_2*((scaling_factor * x)**exp_2)
