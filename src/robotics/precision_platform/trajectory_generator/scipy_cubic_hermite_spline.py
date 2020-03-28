@@ -4,23 +4,31 @@ import numpy as np
 
 x_points = np.array([0, 1, 2, 3])
 y_points = np.array([12,14,22,39])
-dydx_values = np.array([0, 5, 3, 0])
+dydx_values = np.array([20, 5, 3, -20])
 
 tck = interp.CubicHermiteSpline(x_points, y_points, dydx_values)
+deriv = tck.derivative()
 
 x = []
 y = []
 
 coeff = {}
+d_coeff = {}
 for i in range(len(x_points) - 1):
 	coeff[i] = []
+	d_coeff[i] = []
 	x.append(np.linspace(x_points[i], x_points[i + 1], 100))
 
 for order in tck.c:
 	for i in range(len(x_points) - 1):
 		coeff[i].append(order[i])
 
+for order in deriv.c:
+	for i in range(len(x_points) - 1):
+		d_coeff[i].append(order[i])
+
 print(coeff)
+print(d_coeff)
 
 for seg in coeff:
 	y.append(coeff[seg][0] * (x[seg] - x_points[seg])**3 + coeff[seg][1] * (x[seg] - x_points[seg])**2 + coeff[seg][2] * (x[seg] - x_points[seg]) + coeff[seg][3])
