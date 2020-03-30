@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # parameter
-MAX_T = 100.0  # maximum time to the goal [s]
-MIN_T = 5.0  # minimum time to the goal[s]
+MAX_T = 10.0  # maximum time to the goal [s]
+MIN_T = 1.0  # minimum time to the goal[s]
 
 show_animation = True
 
@@ -76,6 +76,7 @@ def quintic_polynomials_planner(sx, sy, syaw, sv, sa, gx, gy, gyaw, gv, ga, max_
         ryaw: yaw angle result list
         rv: velocity result list
         ra: accel result list
+        rk: curvature result list
     """
 
     vxs = sv * math.cos(syaw)
@@ -88,13 +89,13 @@ def quintic_polynomials_planner(sx, sy, syaw, sv, sa, gx, gy, gyaw, gv, ga, max_
     axg = ga * math.cos(gyaw)
     ayg = ga * math.sin(gyaw)
 
-    time, rx, ry, ryaw, rv, ra, rj = [], [], [], [], [], [], []
+    time, rx, ry, ryaw, rv, ra, rj, rk = [], [], [], [], [], [], [], []
 
     for T in np.arange(MIN_T, MAX_T, MIN_T):
         xqp = QuinticPolynomial(sx, vxs, axs, gx, vxg, axg, T)
         yqp = QuinticPolynomial(sy, vys, ays, gy, vyg, ayg, T)
 
-        time, rx, ry, ryaw, rv, ra, rj = [], [], [], [], [], [], []
+        time, rx, ry, ryaw, rv, ra, rj, rk = [], [], [], [], [], [], [], []
 
         for t in np.arange(0.0, T + dt, dt):
             time.append(t)
@@ -122,6 +123,9 @@ def quintic_polynomials_planner(sx, sy, syaw, sv, sa, gx, gy, gyaw, gv, ga, max_
                 j *= -1
             rj.append(j)
 
+            k = abs((vx*ay) - (vy*ax)) / (((vx**2) + (vy**2))**(3/2))
+            rk.append(k)
+
         if max([abs(i) for i in ra]) <= max_accel and max([abs(i) for i in rj]) <= max_jerk:
             print("find path!!")
             break
@@ -138,13 +142,13 @@ def quintic_polynomials_planner(sx, sy, syaw, sv, sa, gx, gy, gyaw, gv, ga, max_
             plot_arrow(gx, gy, gyaw)
             plot_arrow(rx[i], ry[i], ryaw[i])
             plt.title("Time[s]:" + str(time[i])[0:4] +
-                      " v[m/s]:" + str(rv[i])[0:4] +
-                      " a[m/ss]:" + str(ra[i])[0:4] +
-                      " jerk[m/sss]:" + str(rj[i])[0:4],
+                      " v[in/s]:" + str(rv[i])[0:4] +
+                      " a[in/ss]:" + str(ra[i])[0:4] +
+                      " curvature[rad/in]:" + str(rk[i])[0:4],
                       )
             plt.pause(0.001)
 
-    return time, rx, ry, ryaw, rv, ra, rj
+    return time, rx, ry, ryaw, rv, ra, rk
 
 
 def plot_arrow(x, y, yaw, length=1.0, width=0.5, fc="r", ec="k"):  # pragma: no cover
@@ -164,22 +168,25 @@ def plot_arrow(x, y, yaw, length=1.0, width=0.5, fc="r", ec="k"):  # pragma: no 
 def main():
     print(__file__ + " start!!")
 
-    sx = 10.0  # start x position [m]
-    sy = 10.0  # start y position [m]
-    syaw = np.deg2rad(10.0)  # start yaw angle [rad]
-    sv = 1.0  # start speed [m/s]
-    sa = 0.1  # start accel [m/ss]
-    gx = 30.0  # goal x position [m]
-    gy = -10.0  # goal y position [m]
-    gyaw = np.deg2rad(20.0)  # goal yaw angle [rad]
-    gv = 1.0  # goal speed [m/s]
-    ga = 0.1  # goal accel [m/ss]
-    max_accel = 1.0  # max accel [m/ss]
-    max_jerk = 0.5  # max jerk [m/sss]
+    sx = 10.0  # start x position [in]
+    sy = 10.0  # start y position [in]
+    syaw = np.deg2rad(0.0)  # start yaw angle [rad]
+    sv = 5  # start speed [in/s]
+    sa = 0.1  # start accel [in/ss]
+    gx = 76.0  # goal x position [in]
+    gy = 20.0  # goal y position [in]
+    gyaw = np.deg2rad(180.0)  # goal yaw angle [rad]
+    gv = 5  # goal speed [in/s]
+    ga = 0.1  # goal accel [in/ss]
+    max_accel = 7.0  # max accel [in/ss]
+    max_jerk = 0.3  # max jerk [in/sss]
     dt = 0.1  # time tick [s]
 
-    time, x, y, yaw, v, a, j = quintic_polynomials_planner(
+    time, x, y, yaw, v, a, k = quintic_polynomials_planner(
         sx, sy, syaw, sv, sa, gx, gy, gyaw, gv, ga, max_accel, max_jerk, dt)
+
+    print(str(x))
+    print(str(y))
 
     if show_animation:  # pragma: no cover
         plt.plot(x, y, "-r")
@@ -193,22 +200,23 @@ def main():
         plt.subplots()
         plt.plot(time, v, "-r")
         plt.xlabel("Time[s]")
-        plt.ylabel("Speed[m/s]")
+        plt.ylabel("Speed[in/s]")
         plt.grid(True)
 
         plt.subplots()
         plt.plot(time, a, "-r")
         plt.xlabel("Time[s]")
-        plt.ylabel("accel[m/ss]")
+        plt.ylabel("accel[in/ss]")
         plt.grid(True)
 
         plt.subplots()
-        plt.plot(time, j, "-r")
+        plt.plot(time, k, "-r")
         plt.xlabel("Time[s]")
-        plt.ylabel("jerk[m/sss]")
+        plt.ylabel("curvature[rad/in]")
         plt.grid(True)
 
         plt.show()
+
 
 
 if __name__ == '__main__':
