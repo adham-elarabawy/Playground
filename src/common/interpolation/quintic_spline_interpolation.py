@@ -83,7 +83,7 @@ class QuinticSpline:
 
     @staticmethod
     def get_hermite_vector(t, d=0):
-        assert ((d >= 0) and (d <=2)), "Attempted to evaluate a derivate greater than available hermite basis (or a negative derivative)"
+        assert ((d >= 0) and (d <=2)), "Attempted to evaluate a derivative greater than available hermite basis (or a negative derivative)"
         t_vector = np.array([t**5, t**4, t**3, t**2, t, 1])
         if d == 0 :
             return QuinticSpline.hermite_basis.dot(t_vector)
@@ -93,7 +93,7 @@ class QuinticSpline:
             return QuinticSpline.hermite_basis_dd.dot(t_vector)
 
     def evaluate(self, t, d=0):
-        assert ((d >= 0) and (d <=2)), "Attempted to evaluate a derivate greater than available hermite basis (or a negative derivative)" 
+        assert ((d >= 0) and (d <=2)), "Attempted to evaluate a derivative greater than available hermite basis (or a negative derivative)" 
         hermite_vector = QuinticSpline.get_hermite_vector(t, d)
         return np.array([hermite_vector.dot(self.x_control_vector), hermite_vector.dot(self.y_control_vector)])
 
