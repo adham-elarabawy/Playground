@@ -14,6 +14,8 @@ y = []
 
 coeff = {}
 d_coeff = {}
+
+print(tck.c)
 for i in range(len(x_points) - 1):
 	coeff[i] = []
 	d_coeff[i] = []
@@ -41,6 +43,6 @@ for i in range(len(x)):
 		x_s.append(x[i][j])
 		y_s.append(y[i][j])
 
-plt.plot(x_points, y_points, 'bo')
+plt.plot(x_points, y_points, 'r--')
 plt.plot(x_s, y_s)
 plt.show()
