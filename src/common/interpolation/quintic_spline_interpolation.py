@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.integrate import quad
 
 class Pose:
     """
@@ -127,26 +128,151 @@ class Path:
         for i, waypoint in enumerate(waypoints):
             if (i < self.num_waypoints - 1):
                 self.splines.append(QuinticSpline(waypoints[i], waypoints[i+1]))
+    
+    def map_parameter(self, t):
+        return t * (len(self.splines))
+
+    def get_spline(self, t):
+        assert ((t >= 0) and (t <= 1)), "Attempted to extrapolate out of the Path"
+        normalized_t = self.map_parameter(t)
+        spline_index = int(normalized_t)
+        spline_local_t = normalized_t - spline_index
+
+        if spline_index == len(self.splines):
+            spline_index = len(self.splines) - 1
+            spline_local_t = 1
         
+        return self.splines[spline_index], spline_local_t
+
+    def evaluate(self, t, d=0):
+        assert ((t >= 0) and (t <= 1)), "Attempted to extrapolate out of the Path"
+
+        spline, local_t = self.get_spline(t)
+        return spline.evaluate(local_t, d)
+
+    def compute_curvature(self, t):
+        assert ((t >= 0) and (t <= 1)), "Attempted to extrapolate out of the Path"
+        
+        spline, local_t = self.get_spline(t)
+        return spline.compute_curvature(local_t)
+    
+    def theta(self, t):
+        """returns radians"""
+        path_deriv = self.evaluate(t, 1)
+        dydt = path_deriv[1]
+        dxdt = path_deriv[0]
+        slope = dydt / dxdt
+        
+        return math.atan(slope)
 
     def get_plot_values(self, d=0, resolution = 100):
         t = np.linspace(0, 1, num=resolution)
-        x, y, k = [], [], []
-        for spline in self.splines:
-            for step in t:
-                point = spline.evaluate(step, d)
-                x.append(point[0])
-                y.append(point[1])
-                k.append(spline.compute_curvature(step))
-        return x,y,k
+        x, y= [], []
+        for step in t:
+            point = self.evaluate(step, d)
+            x.append(point[0])
+            y.append(point[1])
+        return x,y
 
-waypoints = [Pose(0,0,0), Pose(25,15,-0), Pose(0,30,180)]
+class Robot:
+
+    def __init__(self, track_width, max_velocity, max_acceleration):
+        self.track_width = track_width
+        self.max_velocity = max_velocity
+        self.max_acceleration = max_acceleration
+
+class Trajectory:
+
+    max_dx = 0.127 * 10
+    max_dy = 0.00127 * 10
+    max_dtheta = 0.0872 * 37
+
+    def integrand(self, t):
+        deriv_point = self.path.evaluate(t, 1)
+        dx = deriv_point[0]
+        dy = deriv_point[1]
+        return math.sqrt((dx)**2 + (dy)**2)
+
+    def __init__(self, robot, path, v_initial=0, a_initial=0, spline_resolution=1000, max_trajectory_time=10, min_trajectory_time=1, optimization_dt=0.1):
+        self.robot = robot
+        self.path = path
+        self.v_initial = v_initial
+        self.a_initial = a_initial
+        self.step_size = 1 / (spline_resolution * len(self.path.splines))
+        self.max_trajectory_time = max_trajectory_time
+        self.min_trajectory_time = min_trajectory_time
+        self.optimization_dt = optimization_dt
+        self.total_arc_length = quad(self.integrand, 0, 1)[0]
+        self.control_points = []
+        self.trajectory = []
+
+        done = False
+        t0 = 0
+        t1 = 1
+        count = 0
+
+        self.control_points.append(self.path.evaluate(t0))
+        while not done:
+            point0 = self.path.evaluate(t0)
+            point1 = self.path.evaluate(t1)
+            dx = abs(point1[0] - point0[0])
+            dy = abs(point1[1] - point0[1])
+            dtheta = abs(self.path.theta(t1) - self.path.theta(t0))
+
+
+            if (dx <= Trajectory.max_dx) and (dy <= Trajectory.max_dy) and (dtheta <= Trajectory.max_dtheta):
+                self.control_points.append([t1, self.path.evaluate(t1)])
+                if t1 >= 1:
+                    done = True
+                t0 = t1
+                t1 = 1
+                count += 1
+                # print(t0, end='\r')
+            else:
+                t1 = (t1 + t0) / 2
+        print(self.control_points)
+                
+
+
+
+
+
+
+
+
+
+        # for time in np.flip(np.append(np.arange(self.min_trajectory_time, self.max_trajectory_time, self.optimization_dt), self.max_trajectory_time)):
+        #     total_time = time
+        #     for t in np.append(np.arange(0,1, self.step_size), 1):
+        #         if t == 0:
+        #             current_point = self.path.evaluate(t)
+        #             self.trajectory.append([v_initial, a_initial])
+        #         else :
+        #             current_point = self.path.evaluate(t)
+        #             distance_from_last = math.sqrt((current_point[0] - last_point[0])**2 + (current_point[1] - last_point[0])**2)
+
+
+                # last_point = current_point
+
+
+            
+
+
+        #     self.trajectory.append([self.path.evaluate(t), self.path.compute_curvature(t)])
+
+
+
+
+waypoints = [Pose(0,0,0), Pose(30,30,180), Pose(10,45,90)]
 path = Path(waypoints)
-x, y, k = path.get_plot_values()
+robot = Robot(5, 20, 4)
+trajectory = Trajectory(robot, path)
+x, y = path.get_plot_values()
 
 plt.plot(x, y)
+plt.plot([pose.x for pose in waypoints], [pose.y for pose in waypoints], 'ro')
 plt.gca().set_aspect('equal', adjustable='box')
-plt.xlim(0,30)
-plt.ylim(0,30)
+plt.xlim(0,45)
+plt.ylim(0,45)
 plt.title('Quintic Hermite Spline Interpolation')
 plt.show()
