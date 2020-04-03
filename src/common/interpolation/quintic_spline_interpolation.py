@@ -173,6 +173,10 @@ class Path:
             x.append(point[0])
             y.append(point[1])
         return x,y
+    
+    @staticmethod
+    def get_distance_between(point0, point1):
+        return math.sqrt((point0[0] - point1[0])**2 + (point0[1] - point1[1])**2)
 
 class Robot:
 
@@ -180,6 +184,7 @@ class Robot:
         self.track_width = track_width
         self.max_velocity = max_velocity
         self.max_acceleration = max_acceleration
+        self.min_acceleration = -max_acceleration
 
 class Trajectory:
 
@@ -193,10 +198,11 @@ class Trajectory:
         dy = deriv_point[1]
         return math.sqrt((dx)**2 + (dy)**2)
 
-    def __init__(self, robot, path, v_initial=0, a_initial=0, spline_resolution=1000, max_trajectory_time=10, min_trajectory_time=1, optimization_dt=0.1):
+    def __init__(self, robot, path, v_initial=0, v_final=0, a_initial=0, spline_resolution=1000, max_trajectory_time=10, min_trajectory_time=1, optimization_dt=0.1):
         self.robot = robot
         self.path = path
         self.v_initial = v_initial
+        self.v_final = v_final
         self.a_initial = a_initial
         self.step_size = 1 / (spline_resolution * len(self.path.splines))
         self.max_trajectory_time = max_trajectory_time
@@ -211,7 +217,7 @@ class Trajectory:
         t1 = 1
         count = 0
 
-        self.control_points.append(self.path.evaluate(t0))
+        self.control_points.append(t0)
         while not done:
             point0 = self.path.evaluate(t0)
             point1 = self.path.evaluate(t1)
@@ -221,7 +227,7 @@ class Trajectory:
 
 
             if (dx <= Trajectory.max_dx) and (dy <= Trajectory.max_dy) and (dtheta <= Trajectory.max_dtheta):
-                self.control_points.append([t1, self.path.evaluate(t1)])
+                self.control_points.append(t1)
                 if t1 >= 1:
                     done = True
                 t0 = t1
@@ -230,43 +236,118 @@ class Trajectory:
                 # print(t0, end='\r')
             else:
                 t1 = (t1 + t0) / 2
-        print(self.control_points)
-                
+
+        forwardpass = [] # t parameter, velocity on trajectory, acceleration
+
+        # STEP 1: forward pass
+        for i, control_point_t in enumerate(self.control_points):
+            current_state = [self.path.evaluate(control_point_t), self.path.compute_curvature(control_point_t)] # [[x,y], curvature]
+            if control_point_t == 0:
+                forwardpass.append([control_point_t, v_initial, self.robot.max_acceleration]) # predecessor
+            else:
+                forwardpass.append([control_point_t, 0, 0])
+                ds = Path.get_distance_between(current_state[0], prev_state[0])
+
+                while True:
+                    # vf = sqrt(vi^2 + 2*a*d)
+                    max_reachable_velocity = math.sqrt((forwardpass[i-1][1])**2 + 2 * forwardpass[i-1][2] * ds )
+                    max_velocity = min(self.robot.max_velocity, max_reachable_velocity)
+                    forwardpass[i][1] = max_velocity
+                    forwardpass[i][2] = self.robot.max_acceleration
 
 
+                    if(ds < (10**-6)):
+                        break #not sure why?
 
+                    actual_acceleration = (max_velocity**2 - (forwardpass[i-1][1])**2) / (2*ds)
 
+                    if ((actual_acceleration - 10**-6) > self.robot.max_acceleration):
+                        forwardpass[i-1][2] = self.robot.max_acceleration
+                    else:
+                        if actual_acceleration > forwardpass[i-1][2]:
+                            forwardpass[i-1][2] = actual_acceleration
 
+                        break
 
+            prev_state = current_state
 
+        backwardpass = []  # t parameter, velocity on trajectory, acceleration
 
+        # STEP 2: backward pass
+        for i, (reversed_i, control_point_t) in enumerate(reversed(list(enumerate(self.control_points)))):
+            current_state = [self.path.evaluate(control_point_t), self.path.compute_curvature(control_point_t)] # [[x,y], curvature]
+            if i == 0:
+                backwardpass.append([control_point_t, v_final, self.robot.max_acceleration]) # successor
+            else:
+                forward_state = forwardpass[reversed_i]
+                backwardpass.append([control_point_t, 0, 0])
+                ds = Path.get_distance_between(current_state[0], prev_state[0])
 
-        # for time in np.flip(np.append(np.arange(self.min_trajectory_time, self.max_trajectory_time, self.optimization_dt), self.max_trajectory_time)):
-        #     total_time = time
-        #     for t in np.append(np.arange(0,1, self.step_size), 1):
-        #         if t == 0:
-        #             current_point = self.path.evaluate(t)
-        #             self.trajectory.append([v_initial, a_initial])
-        #         else :
-        #             current_point = self.path.evaluate(t)
-        #             distance_from_last = math.sqrt((current_point[0] - last_point[0])**2 + (current_point[1] - last_point[0])**2)
+                while True:
+                    # vf = sqrt(vi^2 + 2*a*d)
+                    max_reachable_velocity = math.sqrt((backwardpass[i-1][1])**2 + 2 * backwardpass[i-1][2] * ds)
 
+                    if max_reachable_velocity >= forwardpass[reversed_i][1]:
+                        break
 
-                # last_point = current_point
+                    forwardpass[reversed_i][1] = max_reachable_velocity
 
+                    if(ds < (10**-6)):
+                        break #not sure why?
 
+                    actual_acceleration = (max_reachable_velocity**2 - (backwardpass[i-1][1])**2) / (2*ds)
+
+                    if ((actual_acceleration + 10**-6) < self.robot.min_acceleration):
+                        backwardpass[i-1][2] = self.robot.min_acceleration
+                    else:
+                        backwardpass[i-1][2] = actual_acceleration
+                        break
+            prev_state = current_state
+        backwardpass = list(reversed(backwardpass))
+
+        # STEP 3: integrate the constrained states forward in time to get the trajectory states
+        self.states = [] # t, velocity, acceleration, curvature
+        time = 0 # seconds
+        velocity = 0 # inches/second
+
+        for i, control_point_t in enumerate(self.control_points):
+            if control_point_t == 0:
+                ds = Path.get_distance_between(self.path.evaluate(control_point_t), self.path.evaluate(control_point_t+1))
+            else:
+                ds = Path.get_distance_between(self.path.evaluate(control_point_t), self.path.evaluate(prev_control_point_t))
             
+            accel = (forwardpass[i][1]**2 - velocity**2) / (2 * ds)
+
+            dt = 0
+            if i > 0:
+                self.states[i-1][2] = accel
+                if(abs(accel) > 10**-6):
+                    # v_f = v_0 + a*t
+                    dt = (forwardpass[i][1] - velocity) / accel
+                elif abs(velocity) > 10**-6:
+                    # delta_x = v * t
+                    dt = ds / velocity
+                else:
+                    raise RuntimeError
+
+            time += dt
+            prev_control_point_t = control_point_t
+            velocity = forwardpass[i][1]
+            curvature = self.path.compute_curvature(control_point_t)
+
+            self.states.append([control_point_t, velocity, accel, curvature])
+
+        print(self.states)
 
 
-        #     self.trajectory.append([self.path.evaluate(t), self.path.compute_curvature(t)])
 
 
 
 
-waypoints = [Pose(0,0,0), Pose(30,30,180), Pose(10,45,90)]
+waypoints = [Pose(0,0,0), Pose(20,20,45), Pose(0,45,180)]
 path = Path(waypoints)
 robot = Robot(5, 20, 4)
-trajectory = Trajectory(robot, path)
+# trajectory = Trajectory(robot, path)
 x, y = path.get_plot_values()
 
 plt.plot(x, y)
