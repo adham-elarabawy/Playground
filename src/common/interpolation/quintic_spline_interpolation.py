@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import quad
 from matplotlib.animation import FuncAnimation
+import time
 
 plt.style.use('seaborn-pastel')
 
@@ -473,6 +474,7 @@ plt.draw()
 
 plot_traj = trajectory.trajectory[0::7]
 prev_time = 0
+start_time = time.time()
 for i, state in enumerate(plot_traj):
     scp.remove()
     scp = ax.scatter([state.pose.x], [state.pose.y], color='#9467bd')
@@ -482,3 +484,5 @@ for i, state in enumerate(plot_traj):
     if not dt == 0:
         plt.pause(dt)
     prev_time = state.time
+print('Total trajectory time: ', trajectory.trajectory[-1].time)
+print('Total animation time: ', (time.time() - start_time))
