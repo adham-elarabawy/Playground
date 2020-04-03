@@ -435,7 +435,7 @@ class Trajectory:
 
 
 
-waypoints = [Pose(0,0,0), Pose(20,20,45), Pose(0, 40, 180)]
+waypoints = [Pose(0,0,0), Pose(20,20,45), Pose(40, 40, 0)]
 path = Path(waypoints)
 robot = Robot(5, 40, 40)
 trajectory = Trajectory(robot, path)
@@ -471,7 +471,7 @@ plt.ylabel("y (inches)")
 plt.draw()
 # plt.pause(0)
 
-plot_traj = trajectory.trajectory[0::2]
+plot_traj = trajectory.trajectory[0::7]
 prev_time = 0
 for i, state in enumerate(plot_traj):
     scp.remove()
