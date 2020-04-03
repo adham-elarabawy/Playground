@@ -2,6 +2,9 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import quad
+from matplotlib.animation import FuncAnimation
+
+plt.style.use('seaborn-pastel')
 
 class Pose:
     """
@@ -178,6 +181,57 @@ class Path:
     def get_distance_between(point0, point1):
         return math.sqrt((point0[0] - point1[0])**2 + (point0[1] - point1[1])**2)
 
+    @staticmethod
+    def transform(pose0, pose1):
+        initial_translation = [pose0.x, pose0.y]
+        last_translation = [pose1.x, pose1.y]
+        initial_rotation = [math.cos(pose0.theta), math.sin(pose0.theta)]
+        last_rotation = [math.cos(pose1.theta), math.sin(pose1.theta)]
+
+        initial_unary = [math.cos(math.radians(-math.degrees(pose0.theta))), math.sin(math.radians(-math.degrees(pose0.theta)))]
+
+        matrix0 = [last_translation[0] - initial_translation[0], last_translation[1] - initial_translation[1]]
+
+        m_translation = [matrix0[0] * initial_unary[0] - matrix0[1] * initial_unary[1], matrix0[0] * initial_unary[1] + matrix0[1] * initial_unary[0]]
+        m_rotation = [last_rotation[0] * initial_unary[0] - last_rotation[1] * initial_unary[1], last_rotation[1] * initial_unary[0] + last_rotation[0] * initial_unary[1]]
+
+        #normalize rotation matrix
+        magnitude = math.sqrt(m_rotation[0]**2 + m_rotation[1]**2)
+        if magnitude > 10**-9:
+            m_rotation[0] /= magnitude
+            m_rotation[1] /= magnitude
+        else:
+            m_rotation[0] = 1
+            m_rotation[1] = 0
+        
+        return m_translation, m_rotation
+
+
+
+    @staticmethod
+    def twistify(pose0, pose1):
+        transform_translation, transform_rotation = Path.transform(pose0, pose1)
+        dtheta = math.atan2(transform_rotation[1], transform_rotation[0])
+
+        half_dtheta = dtheta/2
+        cos_minus_one = transform_rotation[0] - 1
+
+        if (abs(cos_minus_one) < 10**-9):
+            half_theta_by_tan_of_half_dtheta = 1 - 1 / 12 * dtheta * dtheta
+        else:
+            half_theta_by_tan_of_half_dtheta = -(half_dtheta * transform_rotation[1]) / cos_minus_one
+
+        #rotation
+
+        rotate_by = [half_theta_by_tan_of_half_dtheta, -half_dtheta]
+        times_by = math.sqrt(half_theta_by_tan_of_half_dtheta**2 + half_dtheta**2)
+
+        rotated = [transform_translation[0] * rotate_by[0] - transform_translation[1] * rotate_by[1], transform_translation[0] * rotate_by[1] + transform_translation[1] * rotate_by[0]]
+        final = [rotated[0] * times_by, rotated[1] * times_by]
+
+        return final[0], final[1], dtheta
+
+
 class Robot:
 
     def __init__(self, track_width, max_velocity, max_acceleration):
@@ -186,11 +240,39 @@ class Robot:
         self.max_acceleration = max_acceleration
         self.min_acceleration = -max_acceleration
 
+class ConstrainedState:
+
+    def __init__(self, t, distance, max_velocity, min_acceleration, max_acceleration):
+        self.t = t
+        self.distance = distance
+        self.max_velocity = max_velocity
+        self.min_acceleration = min_acceleration
+        self.max_acceleration = max_acceleration 
+
+    def __str__(self):
+        return str([self.t, self.distance, self.max_velocity, self.min_acceleration, self.max_acceleration])
+
+class State:
+
+    def __init__(self, t, time, distance, pose, velocity, acceleration, curvature):
+        self.t = t
+        self.time = time
+        self.distance = distance
+        self.pose = pose
+        self.velocity = velocity
+        self.acceleration = acceleration
+        self.curvature = curvature
+
+    def __str__(self):
+        return str([self.t, self.time, self.distance, self.pose, self.velocity, self.acceleration, self.curvature])
+
 class Trajectory:
 
-    max_dx = 0.127 * 10
-    max_dy = 0.00127 * 10
-    max_dtheta = 0.0872 * 37
+    max_dx = 0.127 * 39.3701
+    max_dy = 0.00127 * 39.3701
+    max_dtheta = 0.0872 
+
+    kEpsilon = 10**-6
 
     def integrand(self, t):
         deriv_point = self.path.evaluate(t, 1)
@@ -217,143 +299,186 @@ class Trajectory:
         t1 = 1
         count = 0
 
+        #recursive subdivision
         self.control_points.append(t0)
         while not done:
             point0 = self.path.evaluate(t0)
             point1 = self.path.evaluate(t1)
-            dx = abs(point1[0] - point0[0])
-            dy = abs(point1[1] - point0[1])
-            dtheta = abs(self.path.theta(t1) - self.path.theta(t0))
+            theta0 = self.path.theta(t0)
+            theta1 = self.path.theta(t1)
 
+            dx, dy, dtheta = Path.twistify(Pose(point0[0], point0[1], theta0), Pose(point1[0], point1[1], theta1))
 
-            if (dx <= Trajectory.max_dx) and (dy <= Trajectory.max_dy) and (dtheta <= Trajectory.max_dtheta):
+            if (abs(dx) <= Trajectory.max_dx) and (abs(dy) <= Trajectory.max_dy) and (abs(dtheta) <= Trajectory.max_dtheta):
                 self.control_points.append(t1)
                 if t1 >= 1:
                     done = True
                 t0 = t1
                 t1 = 1
                 count += 1
-                # print(t0, end='\r')
+                print(t0, end='\r')
             else:
                 t1 = (t1 + t0) / 2
+        
+        print('\n Found all %f control points, moving on to time-parameterization.\n' % len(self.control_points))
 
-        forwardpass = [] # t parameter, velocity on trajectory, acceleration
+        states = [] # ConstrainedState: t, distance, max_velocity, min_acceleration, max_acceleration 
 
         # STEP 1: forward pass
-        for i, control_point_t in enumerate(self.control_points):
-            current_state = [self.path.evaluate(control_point_t), self.path.compute_curvature(control_point_t)] # [[x,y], curvature]
-            if control_point_t == 0:
-                forwardpass.append([control_point_t, v_initial, self.robot.max_acceleration]) # predecessor
+        for i, t in enumerate(self.control_points):
+            states.append(ConstrainedState(t, 0, 0, 0, 0))
+
+            if t == 0:
+                ds = 0
+                states[i].max_velocity = v_initial
             else:
-                forwardpass.append([control_point_t, 0, 0])
-                ds = Path.get_distance_between(current_state[0], prev_state[0])
+                ds = Path.get_distance_between(self.path.evaluate(states[i].t), self.path.evaluate(states[i-1].t))
+                states[i].distance = states[i-1].distance + ds
 
-                while True:
-                    # vf = sqrt(vi^2 + 2*a*d)
-                    max_reachable_velocity = math.sqrt((forwardpass[i-1][1])**2 + 2 * forwardpass[i-1][2] * ds )
-                    max_velocity = min(self.robot.max_velocity, max_reachable_velocity)
-                    forwardpass[i][1] = max_velocity
-                    forwardpass[i][2] = self.robot.max_acceleration
+            while True:
+                states[i].min_acceleration = self.robot.min_acceleration
+                states[i].max_acceleration = self.robot.max_acceleration
+
+                if (ds < Trajectory.kEpsilon):
+                    break
+
+                # for state in states:
+                #     print(state)
+
+                # vf = sqrt(vi^2 + 2ad)
+                temp_velocity = math.sqrt(states[i-1].max_velocity**2 + (states[i-1].max_acceleration * 2 * ds))
+                states[i].max_velocity = min(self.robot.max_velocity, temp_velocity)
 
 
-                    if(ds < (10**-6)):
-                        break #not sure why?
+                
+                # if the actual acceleration for this state is higher than the max acceleration that we applied, then we need to reduce the maximum acceleration of the predecessor and try again.
+                actual_accel = (states[i].max_velocity**2 - states[i-1].max_velocity**2) / (2 * ds)
 
-                    actual_acceleration = (max_velocity**2 - (forwardpass[i-1][1])**2) / (2*ds)
+                # if we violate the max acceleration constraint, let's modify the predecessor
+                if(states[i].max_acceleration < (actual_accel - Trajectory.kEpsilon)):
+                    states[i-1].max_acceleration = states[i].max_acceleration
+                else:
+                    if (actual_accel > states[i-1].min_acceleration):
+                        states[i-1].max_acceleration = actual_accel
+                    break
 
-                    if ((actual_acceleration - 10**-6) > self.robot.max_acceleration):
-                        forwardpass[i-1][2] = self.robot.max_acceleration
-                    else:
-                        if actual_acceleration > forwardpass[i-1][2]:
-                            forwardpass[i-1][2] = actual_acceleration
-
-                        break
-
-            prev_state = current_state
-
-        backwardpass = []  # t parameter, velocity on trajectory, acceleration
-
+        # ConstrainedState: t, distance, max_velocity, min_acceleration, max_acceleration 
         # STEP 2: backward pass
         for i, (reversed_i, control_point_t) in enumerate(reversed(list(enumerate(self.control_points)))):
-            current_state = [self.path.evaluate(control_point_t), self.path.compute_curvature(control_point_t)] # [[x,y], curvature]
             if i == 0:
-                backwardpass.append([control_point_t, v_final, self.robot.max_acceleration]) # successor
+                states[reversed_i].max_velocity = v_final
+                ds = 0
             else:
-                forward_state = forwardpass[reversed_i]
-                backwardpass.append([control_point_t, 0, 0])
-                ds = Path.get_distance_between(current_state[0], prev_state[0])
+                ds = states[reversed_i].distance - states[reversed_i + 1].distance # negative
 
-                while True:
-                    # vf = sqrt(vi^2 + 2*a*d)
-                    max_reachable_velocity = math.sqrt((backwardpass[i-1][1])**2 + 2 * backwardpass[i-1][2] * ds)
+            while True:
+                if ds > -Trajectory.kEpsilon:
+                    break
 
-                    if max_reachable_velocity >= forwardpass[reversed_i][1]:
-                        break
+                #enforce max velocity limit (reverse): vf = sqrt(vi^2 + 2*a*d), where vi is the control point after this one (chronologically on the trajectory)
+                new_max_velocity = math.sqrt(states[reversed_i+1].max_velocity**2 + states[reversed_i+1].min_acceleration * 2 * ds)
 
-                    forwardpass[reversed_i][1] = max_reachable_velocity
+                #this state can be finalized if this is true
+                if (new_max_velocity >= states[reversed_i].max_velocity):
+                    break
 
-                    if(ds < (10**-6)):
-                        break #not sure why?
+                states[reversed_i].max_velocity = new_max_velocity
 
-                    actual_acceleration = (max_reachable_velocity**2 - (backwardpass[i-1][1])**2) / (2*ds)
 
-                    if ((actual_acceleration + 10**-6) < self.robot.min_acceleration):
-                        backwardpass[i-1][2] = self.robot.min_acceleration
-                    else:
-                        backwardpass[i-1][2] = actual_acceleration
-                        break
-            prev_state = current_state
-        backwardpass = list(reversed(backwardpass))
+
+                # if the actual acceleration for this state is lower than the minimum acceleration, we need to lower the minimum acceleration of the control point after this one and try again
+                actual_accel = (states[reversed_i].max_velocity**2 - states[reversed_i+1].max_velocity**2) / (2 * ds)
+
+                if (states[reversed_i].min_acceleration > actual_accel + Trajectory.kEpsilon):
+                    states[reversed_i+1].min_acceleration = states[reversed_i].min_acceleration
+                else:
+                    states[reversed_i+1].min_acceleration = actual_accel
+                    break
+
 
         # STEP 3: integrate the constrained states forward in time to get the trajectory states
-        self.states = [] # t, velocity, acceleration, curvature
+         # t, distance, velocity, acceleration, curvature
         time = 0 # seconds
+        distance = 0 # inches
         velocity = 0 # inches/second
 
-        for i, control_point_t in enumerate(self.control_points):
-            if control_point_t == 0:
-                ds = Path.get_distance_between(self.path.evaluate(control_point_t), self.path.evaluate(control_point_t+1))
-            else:
-                ds = Path.get_distance_between(self.path.evaluate(control_point_t), self.path.evaluate(prev_control_point_t))
-            
-            accel = (forwardpass[i][1]**2 - velocity**2) / (2 * ds)
+        for i, state in enumerate(states):
 
+            # calculate the change in position between the current state and the previous state
+            ds = state.distance - distance
+
+            accel = 0
+
+            # calcualte dt
             dt = 0
-            if i > 0:
-                self.states[i-1][2] = accel
-                if(abs(accel) > 10**-6):
-                    # v_f = v_0 + a*t
-                    dt = (forwardpass[i][1] - velocity) / accel
-                elif abs(velocity) > 10**-6:
-                    # delta_x = v * t
+            if (i > 0):
+                # calculate the acceleration between the current state and the previous state
+                accel = (state.max_velocity**2 - velocity**2) / (2 * ds)
+                self.trajectory[i-1].acceleration = accel
+                if abs(accel) > Trajectory.kEpsilon:
+                    # vf = v0 + a * t
+                    dt = (state.max_velocity - velocity) / accel
+                elif abs(velocity) > Trajectory.kEpsilon:
+                    #delta_x = v * t
                     dt = ds / velocity
                 else:
                     raise RuntimeError
-
+            
+            velocity = state.max_velocity
+            distance = state.distance
             time += dt
-            prev_control_point_t = control_point_t
-            velocity = forwardpass[i][1]
-            curvature = self.path.compute_curvature(control_point_t)
 
-            self.states.append([control_point_t, velocity, accel, curvature])
-
-        print(self.states)
+            self.trajectory.append(State(state.t, time, distance, Pose(self.path.evaluate(state.t)[0],self.path.evaluate(state.t)[1], self.path.theta(state.t)), velocity, accel, self.path.compute_curvature(state.t)))
 
 
 
 
 
 
-waypoints = [Pose(0,0,0), Pose(20,20,45), Pose(0,45,180)]
+waypoints = [Pose(0,0,0), Pose(20,20,45), Pose(0, 40, 180)]
 path = Path(waypoints)
-robot = Robot(5, 20, 4)
-# trajectory = Trajectory(robot, path)
+robot = Robot(5, 40, 40)
+trajectory = Trajectory(robot, path)
 x, y = path.get_plot_values()
 
-plt.plot(x, y)
-plt.plot([pose.x for pose in waypoints], [pose.y for pose in waypoints], 'ro')
-plt.gca().set_aspect('equal', adjustable='box')
-plt.xlim(0,45)
-plt.ylim(0,45)
+# UNCOMMENT THIS SECTION IF YOU WANT TO JUST SEE THE PATH
+#---------------
+# plt.plot(x, y)
+# plt.plot([pose.x for pose in waypoints], [pose.y for pose in waypoints], 'ro')
+
+# plt.plot([state.time for state in trajectory.trajectory], [state.velocity for state in trajectory.trajectory], 'g')
+# plt.gca().set_aspect('equal', adjustable='box')
+# plt.xlim(0,45)
+# plt.ylim(0,45)
+# plt.title('Quintic Hermite Spline Interpolation')
+# plt.show()
+#---------------
+
+
+# UNCOMMENT THIS SECTION IF YOU WANT TO SEE THE PATH + TIME_PARAMETERIZED TRAJECTORY ANIMATED
+#---------------
+plt.ion()
+fig, ax = plt.subplots()
+sc = ax.plot(x, y)
+vt = ax.plot([state.time for state in trajectory.trajectory], [state.velocity for state in trajectory.trajectory], 'g')
+wp = ax.plot([pose.x for pose in waypoints], [pose.y for pose in waypoints], 'ro')
+scp = ax.scatter([0], [0], color='#9467bd')
+plt.xlim(0, 45)
+plt.ylim(0, 45)
 plt.title('Quintic Hermite Spline Interpolation')
-plt.show()
+plt.xlabel("x (inches)")
+plt.ylabel("y (inches)")
+plt.draw()
+# plt.pause(0)
+
+plot_traj = trajectory.trajectory[0::2]
+prev_time = 0
+for i, state in enumerate(plot_traj):
+    scp.remove()
+    scp = ax.scatter([state.pose.x], [state.pose.y], color='#9467bd')
+    fig.canvas.draw_idle()
+    dt = state.time - prev_time
+    print(state.velocity, end='\r')
+    if not dt == 0:
+        plt.pause(dt)
+    prev_time = state.time
