@@ -1,7 +1,7 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.integrate import quad
+# from scipy.integrate import quad
 import time
 
 plt.style.use('seaborn-pastel')
@@ -238,27 +238,6 @@ class Path:
 
         return final[0], final[1], dtheta
 
-
-class Robot:
-
-    def __init__(self, track_width, max_velocity, max_acceleration):
-        self.track_width = track_width
-        self.max_velocity = max_velocity
-        self.max_acceleration = max_acceleration
-        self.min_acceleration = -max_acceleration
-
-class ConstrainedState:
-
-    def __init__(self, t, distance, max_velocity, min_acceleration, max_acceleration):
-        self.t = t
-        self.distance = distance
-        self.max_velocity = max_velocity
-        self.min_acceleration = min_acceleration
-        self.max_acceleration = max_acceleration 
-
-    def __str__(self):
-        return str([self.t, self.distance, self.max_velocity, self.min_acceleration, self.max_acceleration])
-
 class State:
 
     def __init__(self, t, time, distance, pose, velocity, acceleration, curvature):
@@ -272,6 +251,37 @@ class State:
 
     def __str__(self):
         return str([self.t, self.time, self.distance, self.pose, self.velocity, self.acceleration, self.curvature])
+
+class Robot:
+
+    def __init__(self, track_width, max_velocity, max_acceleration):
+        self.track_width = track_width
+        self.max_velocity = max_velocity
+        self.max_acceleration = max_acceleration
+        self.min_acceleration = -max_acceleration
+
+    def get_wheel_speeds_from_state(self, state):
+        # get curvature: w = v(in/s) * curvature(rad/in) = rad/s
+        angular_velocity = state.velocity * state.curvature
+
+        # get velocities:
+        right_velocity = state.velocity + self.track_width * angular_velocity
+        left_velocity = state.velocity - self.track_width * angular_velocity
+
+        return left_velocity, right_velocity
+
+
+class ConstrainedState:
+
+    def __init__(self, t, distance, max_velocity, min_acceleration, max_acceleration):
+        self.t = t
+        self.distance = distance
+        self.max_velocity = max_velocity
+        self.min_acceleration = min_acceleration
+        self.max_acceleration = max_acceleration 
+
+    def __str__(self):
+        return str([self.t, self.distance, self.max_velocity, self.min_acceleration, self.max_acceleration])
 
 class Trajectory:
 
@@ -297,7 +307,7 @@ class Trajectory:
         self.max_trajectory_time = max_trajectory_time
         self.min_trajectory_time = min_trajectory_time
         self.optimization_dt = optimization_dt
-        self.total_arc_length = quad(self.integrand, 0, 1)[0]
+        # self.total_arc_length = quad(self.integrand, 0, 1)[0]
         self.control_points = []
         self.trajectory = []
 

@@ -5,7 +5,7 @@ from scipy.integrate import quad
 import time
 from quintic_spline_interpolation import Pose, Path, Robot, Trajectory
 
-waypoints = [Pose(0,0,0), Pose(20,20,45), Pose(40, 40, 0), Pose(50,50, 135), Pose(0,60,180)]
+waypoints = [Pose(0,0,0), Pose(20,20,45)]
 path = Path(waypoints)
 robot = Robot(5, 40, 5)
 trajectory = Trajectory(robot, path)
