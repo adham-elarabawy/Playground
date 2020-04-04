@@ -61,6 +61,7 @@ while not FINISHED:
     dy = expr_deriv.subs(x, curr_x)
     scp.remove()
     scp = ax.scatter(curr_x, curr_y, color='#9467bd')
+
     fig.canvas.draw_idle()
     history.append(curr_x)
 

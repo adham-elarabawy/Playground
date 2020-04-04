@@ -34,6 +34,13 @@ class Pose:
         self.theta = math.radians(theta)
         self.dydx = math.tan(math.radians(theta))
 
+    @staticmethod
+    def lerp(pose0, pose1, t):
+        end_minus_start = [pose1.x - pose0.x, pose1.y - pose0.y]
+        times = [element*t for element in end_minus_start]
+
+        return [pose0.x + times[0], pose0.y + times[1]]
+
 class QuinticSpline:
     """
     An individual quintic hermite spline
@@ -430,59 +437,156 @@ class Trajectory:
             time += dt
 
             self.trajectory.append(State(state.t, time, distance, Pose(self.path.evaluate(state.t)[0],self.path.evaluate(state.t)[1], self.path.theta(state.t)), velocity, accel, self.path.compute_curvature(state.t)))
+        self.total_time = self.trajectory[-1].time
+
+    @staticmethod
+    def lerp(start_value, end_value, t):
+        """
+        linearly interpolates between two values
+
+        start_value : double
+            the start value
+        end_value : double
+            the end value
+        t : double
+            the fraction for interpolation
+        """
+        return start_value + (end_value - start_value) * t
+
+    def interpolate(self, prev_state, end_state, i):
+        """
+        prev_state : State
+            ith state
+        end_state : State
+            i+1 th state
+        i : 
+            interpolant (fraction)
+        """
+
+        #find new t value
+        new_t = Trajectory.lerp(prev_state.t, end_state.t, i) # this might be using the wrong interpolant
+
+        #find new time value
+        new_time = Trajectory.lerp(prev_state.time, end_state.time, i)
+
+        # find the delta time between the current state and the interpolated state
+        delta_t = new_time - prev_state.time
+
+        # if delta_time is negative, flip the order of interpolation
+        if delta_t < 0:
+            return Trajectory.interpolate(end_state, prev_state, 1 - i)
+        
+        # calculate the new velocity: vf = v0 + a*t
+        new_v = prev_state.velocity + (prev_state.acceleration * delta_t)
+
+        # calculate the chane in position
+        # delta_s = v0 * t + 0.5 * a * t^2
+        new_s = prev_state.velocity * delta_t + 0.5 * prev_state.acceleration * delta_t**2
+
+        # to find the new position for the new state, we need to interpolate between the two endpoint poses. The freaction for interpolation is the chagne in position (delta_s) divided by the total distance between the two endpoints.
+        interpolation_frac = new_s / (math.sqrt((prev_state.pose.x - end_state.pose.x)**2 + (prev_state.pose.y - end_state.pose.y)**2))
+
+        new_pos = Pose.lerp(prev_state.pose, end_state.pose, interpolation_frac)
+        new_pose = Pose(new_pos[0], new_pos[1], self.path.theta(new_t))
+        new_curvature = Trajectory.lerp(prev_state.curvature, end_state.curvature, interpolation_frac)
+
+        return State(new_t, new_time, prev_state.distance + new_s, new_pose, new_v, prev_state.acceleration, new_curvature)
+
+
+    def sample(self, time):
+        # if the sample time is smaller than 0, then return the first state
+        if (time <= self.trajectory[0].time):
+            return self.trajectory[0]
+
+        #if the sample time is larger than the total trajectory time, then return the last state
+        if (time >= self.total_time):
+            return self.trajectory[-1]
+        
+        # to get the element we want, we will use a binary search algorithm instead of iterating using a for loop.
+
+        # we start at 1 ebcause we use the previous state later on for interpolation
+
+        low = 1
+        high = len(self.trajectory) - 1
+
+        while not low == high :
+            mid = int((low + high) / 2)
+            if self.trajectory[mid].time < time:
+                low = mid + 1
+            else:
+                high = mid
+
+        # if we reach this point, high and low must be the same
+
+        # the sample's timestamp is now >= to the requested timestep. If it is greater, we need to interpolate between the previous state and the current state to get the exact state that we want
+        sample = self.trajectory[low]
+        prev_sample = self.trajectory[low - 1]
+
+        # if the difference between the states is below kEpsilon, then we are pretty much spot on and can return this state
+        if abs(sample.time - prev_sample.time) < 10**-9 :
+            return sample
+
+        interpolated_sample = self.interpolate(prev_sample, sample, (time - prev_sample.time) / (sample.time - prev_sample.time))
+        return interpolated_sample
 
 
 
 
-
-
-waypoints = [Pose(0,0,0), Pose(20,20,45), Pose(40, 40, 0)]
+waypoints = [Pose(0,0,0), Pose(20,20,45), Pose(40, 40, 0), Pose(50,50, 135), Pose(0,60,180)]
 path = Path(waypoints)
-robot = Robot(5, 40, 40)
+robot = Robot(5, 40, 5)
 trajectory = Trajectory(robot, path)
 x, y = path.get_plot_values()
 
-# UNCOMMENT THIS SECTION IF YOU WANT TO JUST SEE THE PATH
-#---------------
-# plt.plot(x, y)
-# plt.plot([pose.x for pose in waypoints], [pose.y for pose in waypoints], 'ro')
+animation = True
+save = True
 
-# plt.plot([state.time for state in trajectory.trajectory], [state.velocity for state in trajectory.trajectory], 'g')
-# plt.gca().set_aspect('equal', adjustable='box')
-# plt.xlim(0,45)
-# plt.ylim(0,45)
-# plt.title('Quintic Hermite Spline Interpolation')
-# plt.show()
-#---------------
+if not animation:
+    plt.plot(x, y)
+    plt.plot([pose.x for pose in waypoints], [pose.y for pose in waypoints], 'ro')
+    plt.plot([state.pose.x for state in trajectory.trajectory[0::20]], [state.pose.y for state in trajectory.trajectory[0::20]], 'go')
+
+    plt.plot([state.time for state in trajectory.trajectory], [state.velocity for state in trajectory.trajectory], 'g')
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.xlim(0,45)
+    plt.ylim(0,45)
+    plt.title('Quintic Hermite Spline Interpolation')
+    plt.show()
+else:
+    plt.ion()
+    fig, (ax0, ax1) = plt.subplots(2, 1, gridspec_kw={'height_ratios':[12,4]})
+    fig.tight_layout()
+    ax0.set_aspect('equal')
+    sc = ax0.plot(x, y)
+    wp = ax0.plot([pose.x for pose in waypoints], [pose.y for pose in waypoints], 'ro')
+    scp = ax0.scatter([0], [0], color='#9467bd', zorder=4)
+    ax1.set_ylim(0, robot.max_velocity)
+    ax0.title.set_text('Quintic Hermite Spline Interpolation')
+    ax1.title.set_text('Velocity Profile')
+    ax0.set_xlabel("x (inches)")
+    ax0.set_ylabel("y (inches)")
+    ax1.set_xlabel("time (s)")
+    ax1.set_ylabel("velocity (in/second)")
+    vt = ax1.plot([state.time for state in trajectory.trajectory], [state.velocity for state in trajectory.trajectory])
+    plt.subplots_adjust(top=0.9, bottom=0.1, left=0.1, right = 0.9, hspace=0.5)
+    plt.draw()
 
 
-# UNCOMMENT THIS SECTION IF YOU WANT TO SEE THE PATH + TIME_PARAMETERIZED TRAJECTORY ANIMATED
-#---------------
-plt.ion()
-fig, ax = plt.subplots()
-sc = ax.plot(x, y)
-vt = ax.plot([state.time for state in trajectory.trajectory], [state.velocity for state in trajectory.trajectory], 'g')
-wp = ax.plot([pose.x for pose in waypoints], [pose.y for pose in waypoints], 'ro')
-scp = ax.scatter([0], [0], color='#9467bd')
-plt.xlim(0, 45)
-plt.ylim(0, 45)
-plt.title('Quintic Hermite Spline Interpolation')
-plt.xlabel("x (inches)")
-plt.ylabel("y (inches)")
-plt.draw()
-# plt.pause(0)
-
-plot_traj = trajectory.trajectory[0::7]
-prev_time = 0
-start_time = time.time()
-for i, state in enumerate(plot_traj):
-    scp.remove()
-    scp = ax.scatter([state.pose.x], [state.pose.y], color='#9467bd')
-    fig.canvas.draw_idle()
-    dt = state.time - prev_time
-    print(state.velocity, end='\r')
-    if not dt == 0:
+    start_time = time.time()
+    loop_time = 0
+    dt = 0.05
+    total_trajectory_time = trajectory.trajectory[-1].time
+    i = 0
+    while loop_time <= total_trajectory_time:
+        if save:
+            plt.savefig('render/' + str(i) + '.png')
+        scp.remove()
+        scp = ax0.scatter([trajectory.sample(loop_time).pose.x], [trajectory.sample(loop_time).pose.y], color='#9467bd', zorder=4)
+        fig.canvas.draw_idle()
+        print(trajectory.sample(loop_time).velocity, end='\r')
+        loop_time += dt
         plt.pause(dt)
-    prev_time = state.time
-print('Total trajectory time: ', trajectory.trajectory[-1].time)
-print('Total animation time: ', (time.time() - start_time))
+        i += 1
+
+    print('Total trajectory time: ', total_trajectory_time)
+    print('Total animation time: ', (time.time() - start_time))

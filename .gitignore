@@ -3,3 +3,8 @@ src/kelzal/input/*
 src/robotics/input/*
 src/physics/output/*
 src/test.py
+src/common/interpolation/render/*
+src/common/interpolation/.DS_Store
+src/common/.DS_Store
+src/.DS_Store
+src/common/interpolation/output/*
