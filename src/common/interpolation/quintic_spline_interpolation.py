@@ -539,7 +539,7 @@ trajectory = Trajectory(robot, path)
 x, y = path.get_plot_values()
 
 animation = True
-save = True
+save = False # WARNING: IF YOU ENABLE THIS, THE TRAJECTORY VISUALIZATION WILL BE SLOWER THAN IT ACTUALLY IS
 
 if not animation:
     plt.plot(x, y)

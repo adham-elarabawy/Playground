@@ -19,7 +19,7 @@ def alphanum_key(s):
 
 pathIn= 'render/'
 pathOut = 'output/output.avi'
-fps = 1/0.1 
+fps = 1/0.05
 frame_array = []
 files = [f for f in os.listdir(pathIn) if isfile(join(pathIn, f))]
 #for sorting the file names properly
