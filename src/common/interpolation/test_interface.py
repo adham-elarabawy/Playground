@@ -5,9 +5,9 @@ from scipy.integrate import quad
 import time
 from quintic_spline_interpolation import Pose, Path, Robot, Trajectory
 
-waypoints = [Pose(0,0,0), Pose(70, 30, 90)]
+waypoints = [Pose(0,0,0), Pose(80, 30, 90), Pose(50, 50, 180)]
 path = Path(waypoints)
-robot = Robot(190 * 0.03937, 20, 5)
+robot = Robot(190 * 0.03937, 8, 5)
 trajectory = Trajectory(robot, path)
 x, y = path.get_plot_values()
 
