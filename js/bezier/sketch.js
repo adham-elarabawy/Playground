@@ -1,3 +1,5 @@
+let rSlider
+
 
 let dt = 0.008;
 let t = 0;
@@ -60,7 +62,7 @@ function draw() {
   recursive_bezier(cp);
 
   strokeWeight(3);
-  stroke('red');
+  stroke('black');
   for (var i = 0; i < path_history.length-1; i++) {
     line(path_history[i][0], path_history[i][1], path_history[i+1][0], path_history[i+1][1]);
   }
