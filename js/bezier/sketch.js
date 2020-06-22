@@ -1,25 +1,44 @@
 let rSlider
 
 
-let dt = 0.008;
+let dt = 0.005;
 let t = 0;
 
 let canvas_width = 1000;
 let canvas_height = 600;
 
+let x_center = canvas_width / 2;
+
+let L_span = 50;
+let base_height = 150;
+
+let x_scaling_factor = L_span / 200;
+let y_scaling_factor = base_height / 500;
+
+let draw_scale = 3;
+
 let cp = [
-  [100, 100], // first point
-  [50, 300], // control point
-  [300,500], // final point
-  [500,100], // final point
-  [600,300], // final point
-  [800,200]
+  [x_center - L_span, base_height],
+  [x_center - L_span - 80.5*x_scaling_factor, base_height],
+  [x_center - L_span - 100*x_scaling_factor, base_height - 138.9*y_scaling_factor],
+  [x_center - L_span - 100*x_scaling_factor, base_height - 138.9*y_scaling_factor],
+  [x_center - L_span - 100*x_scaling_factor, base_height - 138.9*y_scaling_factor],
+  [x_center, base_height - 138.9*y_scaling_factor],
+  [x_center, base_height - 138.9*y_scaling_factor],
+  [x_center, base_height - 178.6*y_scaling_factor],
+  [x_center + L_span + 103.2*x_scaling_factor, base_height - 178.6*y_scaling_factor],
+  [x_center + L_span + 103.2*x_scaling_factor, base_height - 178.6*y_scaling_factor],
+  [x_center + L_span + 82.6*x_scaling_factor, base_height],
+  [x_center + L_span, base_height],
 ];
 
 let path_history = [];
 
 function setup() {
   createCanvas(canvas_width, canvas_height);
+  for(var i = 0; i < cp.length; i++) {
+    cp[i] = [(cp[i][0] - x_center) * draw_scale + x_center, cp[i][1] * draw_scale]
+  }
 }
 
 function recursive_bezier(points) {
@@ -58,11 +77,18 @@ function recursive_bezier(points) {
 
 function draw() {
   background('#E0E0E0');
+  strokeWeight(5);
+  stroke('#8a8a8a');
+  line(0,2.5,canvas_width,2.5);
+  line(canvas_width / 2, 0, canvas_width / 2, canvas_height);
+  strokeWeight(20);
+  stroke('black');
+  point(x_center, 0);
 
   recursive_bezier(cp);
 
   strokeWeight(3);
-  stroke('black');
+  stroke('red');
   for (var i = 0; i < path_history.length-1; i++) {
     line(path_history[i][0], path_history[i][1], path_history[i+1][0], path_history[i+1][1]);
   }
